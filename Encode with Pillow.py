@@ -1,15 +1,24 @@
 import os
 from PIL import Image
+from random import randint, seed
 
 
 def encode_image():
     text_mask = 0b10000000
     text_len = os.stat(text_file).st_size
     img_len = width * height
-    num_skips = choose_num_of_skips()
+    type_skips, num_skips = choose_number_or_random()
 
-    if text_len > (img_len - 32) // (num_skips + 1):  # Определяем влезет ли
-        print("Too long text")                        # текст в изображение
+    # Количество возможных символов в изображении при выбранном режиме
+    possible_symbols = (img_len - 32) // (num_skips + 1)
+
+    if type_skips == 2:
+        r_seed, r_min, r_max = num_skips
+        seed(r_seed)
+        possible_symbols = (img_len - 32) // (r_max - r_min)
+
+    if text_len > possible_symbols:  # Определяем влезет ли
+        print("Too long text")       # текст в изображение
         return False
 
     embed_len_text(text_file)
@@ -52,8 +61,28 @@ def choose_rgb():
 
 # Выбираем количество пропущенных пикселей для внедрения стегобита.
 def choose_num_of_skips():
-    num = int(input('Choose number of skips pixels for embedding stegobit:\n'))
+    num = int(input('Choose number of skips pixels for embedding stegobit:\n'
+                    '(Enter "0" if you want to encode each pixel)\n'))
     return num
+
+
+def choose_number_or_random():
+    answer = int(input('If you want to skip a specific number of pixels, '
+                       'enter - "1"\nIf you want to choose random generation '
+                       'the number of skipped characters, enter - "2"\n'))
+    if answer == 1:
+        return answer, choose_num_of_skips()
+    elif answer == 2:
+        return answer, choose_seed_min_max()
+    else:
+        print('Wrong answer!')
+
+
+def choose_seed_min_max():
+    c_seed = int(input('Enter random seed:\n'))
+    c_min = int(input('Enter min of random:\n'))
+    c_max = int(input('Enter max of random:\n'))
+    return c_seed, c_min, c_max
 
 
 def embed(source_byte, stego_bit):
