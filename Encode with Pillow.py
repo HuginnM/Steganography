@@ -68,7 +68,7 @@ def embed_color(x, y, stego_bit):
     image.putpixel((x, y), new_color)
 
 
-image = Image.open('image/f35.bmp')  # Открываем изображение
+image = Image.open('images/f35.bmp')  # Открываем изображение
 text_file = 'sample.txt'
 text = open(text_file, 'r')  # Открываем текст
 width = image.size[0]  # Определяем ширину
@@ -78,5 +78,5 @@ selected_rgb = choose_rgb()  # Выбираем спектр, в который 
 
 encode_image()
 
-image.save("image/encoded.bmp", "bmp")
+image.save("images/encoded.bmp", "bmp")
 text.close()

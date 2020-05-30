@@ -46,7 +46,7 @@ def extract_stego_bit(x, y):
     return pix[x, y][selected_rgb] & 1
 
 
-image = Image.open('image/encoded.bmp')  # Открываем изображение
+image = Image.open('images/encoded.bmp')  # Открываем изображение
 text_file = 'result.txt'
 text = open(text_file, 'w', encoding='utf-8')  # Открываем текст
 width = image.size[0]  # Определяем ширину

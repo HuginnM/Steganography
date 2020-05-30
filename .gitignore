@@ -1,0 +1,10 @@
+# Default ignored files
+/shelf/
+.idea/workspace.xml
+
+Sandbox.py
+Encode.py
+Decode.py
+
+result.txt
+images/encoded.bmp
