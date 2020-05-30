@@ -9,8 +9,7 @@ def encode_image():
     img_len = width * height
     type_skips, num_skips = choose_number_or_random()
     possible_symbols = 0
-    r_min = 0
-    r_max = 0
+    r_min, r_max = 1, 1
 
     if type_skips == 1:
         # Чтобы избежать деления на 0 и для корректного пропуска пикселей
@@ -89,7 +88,10 @@ def choose_number_or_random():
 
 def choose_seed_min_max():
     c_seed = int(input('Enter random seed:\n'))
-    c_min = int(input('Enter min of random:\n'))
+    c_min = int(input('Enter min of random(More than 0):\n'))
+    while c_min < 1:
+        print('Min must be more than "0"!')
+        c_min = int(input('Enter min of random(More than 0):\n'))
     c_max = int(input('Enter max of random:\n'))
     return c_seed, c_min, c_max
 
