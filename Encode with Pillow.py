@@ -6,22 +6,29 @@ def encode_image():
     text_mask = 0b10000000
     text_len = os.stat(text_file).st_size
     img_len = width * height
+    num_skips = choose_num_of_skips()
 
-    if text_len > img_len:  # Определяем влезет ли текст в изображение
-        print("Too long text")
+    if text_len > (img_len - 32) // (num_skips + 1):  # Определяем влезет ли
+        print("Too long text")                        # текст в изображение
         return False
 
     embed_len_text(text_file)
 
     while True:
         symbol = 0
-        counter = 0
+        counter = -1
+        num_stegobits = 0  # Количество записанных стегобитов в символ.
         for y in range(height):
             for x in range(width):
                 if y == 0 and x < 32:  # Пропускаем сообщение о количестве
                     continue           # символов в тексте
 
-                if counter % 8 == 0:        # Если весь символ был
+                counter += 1
+
+                if counter % (num_skips + 1) != 0:
+                    continue
+
+                if num_stegobits % 8 == 0:        # Если весь символ был
                     symbol = text.read(1)   # закодирован - берём новый.
 
                     if not symbol:
@@ -32,16 +39,21 @@ def encode_image():
 
                 stego_bit = symbol & text_mask
                 stego_bit >>= 7
-
                 embed_color(x, y, stego_bit)
+                num_stegobits += 1
                 symbol <<= 1
-                counter += 1
 
 
 def choose_rgb():
     chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
                            " 2 - Blue; 3 - Green:\n"))
     return chosen_rgb - 1
+
+
+# Выбираем количество пропущенных пикселей для внедрения стегобита.
+def choose_num_of_skips():
+    num = int(input('Choose number of skips pixels for embedding stegobit:\n'))
+    return num
 
 
 def embed(source_byte, stego_bit):
