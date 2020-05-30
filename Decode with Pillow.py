@@ -28,6 +28,7 @@ def decode_image():
 
             counter += 1
 
+
 def choose_rgb():
     chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
                            " 2 - Blue; 3 - Green:\n"))
