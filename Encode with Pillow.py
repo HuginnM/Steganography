@@ -8,14 +8,20 @@ def encode_image():
     text_len = os.stat(text_file).st_size
     img_len = width * height
     type_skips, num_skips = choose_number_or_random()
+    possible_symbols = 0
+    r_min = 0
+    r_max = 0
 
-    # Количество возможных символов в изображении при выбранном режиме
-    possible_symbols = (img_len - 32) // (num_skips + 1)
-
-    if type_skips == 2:
+    if type_skips == 1:
+        # Чтобы избежать деления на 0 и для корректного пропуска пикселей
+        num_skips += 1
+        # Количество возможных символов в изображении при выбранном режиме
+        possible_symbols = (img_len - 32) // num_skips
+    elif type_skips == 2:
         r_seed, r_min, r_max = num_skips
         seed(r_seed)
         possible_symbols = (img_len - 32) // (r_max - r_min)
+        num_skips = randint(r_min, r_max)
 
     if text_len > possible_symbols:  # Определяем влезет ли
         print("Too long text")       # текст в изображение
@@ -34,7 +40,7 @@ def encode_image():
 
                 counter += 1
 
-                if counter % (num_skips + 1) != 0:
+                if counter % num_skips != 0:
                     continue
 
                 if num_stegobits % 8 == 0:        # Если весь символ был
@@ -51,6 +57,9 @@ def encode_image():
                 embed_color(x, y, stego_bit)
                 num_stegobits += 1
                 symbol <<= 1
+
+                if type_skips == 2:
+                    num_skips = randint(r_min, r_max)
 
 
 def choose_rgb():
