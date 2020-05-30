@@ -49,5 +49,5 @@ def choose_rgb():
 
 
 to_read = int(input("How many characters are in the ciphertext?\n"))
-image_file = "image/encoded.bmp"
+image_file = "images/encoded.bmp"
 decode_image(image_file, "result.txt", to_read)
