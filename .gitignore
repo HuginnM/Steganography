@@ -1,10 +1,8 @@
 # Default ignored files
 /shelf/
 .idea/workspace.xml
+/func_0/
 
 Sandbox.py
-Encode.py
-Decode.py
-
 result.txt
 images/encoded.bmp
