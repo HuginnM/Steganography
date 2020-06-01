@@ -9,34 +9,27 @@ def decode_image():
     symbol = 0
     counter = -1
     num_stegobits = 0  # Количество записанных стегобитов
-    type_skips, num_skips = choose_number_or_random()
-    r_min, r_max = 1, 1
 
-    if type_skips == 1:
-        # Чтобы избежать деления на 0 и для корректного пропуска пикселей
-        num_skips += 1
-    elif type_skips == 2:
-        r_seed, r_min, r_max = num_skips
-        seed(r_seed)
-        num_skips = randint(r_min, r_max)
+    color_list, r_seed, r_min, r_max = choose_stego_key()
+    col_len = len(color_list)
+    seed(r_seed)
+    num_skips = randint(r_min, r_max)
 
     for y in range(height):
         for x in range(width):
             if y == 0 and x < 32:  # Пропускаем сообщение о количестве
                 continue  # символов в тексте
 
-            if recorded_symbols >= amount_symbols:
-                print('Text has been decoded successfully!')
-                return True
-
             counter += 1
-
+            # Если пропустили нужное количество символов - выполняем код
             if counter % num_skips != 0:
                 continue
 
+            num_skips = randint(r_min, r_max)
+            color = choose_color(counter % col_len, color_list)
             # Записываем извлечённый стегобит в символ
             symbol <<= 1
-            symbol |= extract_stego_bit(x, y)
+            symbol |= extract_stego_bit(x, y, color)
             num_stegobits += 1
 
             if num_stegobits % 8 == 0:
@@ -47,53 +40,39 @@ def decode_image():
                 recorded_symbols += 1
                 symbol = 0
 
-            if type_skips == 2:
-                num_skips = randint(r_min, r_max)
+            if recorded_symbols >= amount_symbols:
+                print('Text has been decoded successfully!')
+                return True
 
 
-def choose_rgb():
-    chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
-                           " 2 - Blue; 3 - Green:\n"))
-    return chosen_rgb - 1
+def choose_stego_key():
+    print('Enter stego key, separated by space.\n'
+          'It should look like: "color_pattern random_seed rnd_min rnd_max"\n'
+          'For example: "RGGBBB 1234 1 10"\nEnter stego key --> ', end='')
+    input_list = list(input().split())
+    col_patt = input_list[0]
+    rand_seed, rand_min, rand_max = map(int, input_list[1:])
+    return col_patt, rand_seed, rand_min, rand_max
 
 
-# Выбираем количество пропущенных пикселей для внедрения стегобита.
-def choose_num_of_skips():
-    num = int(input('Choose number of skips pixels for embedding stegobit:\n'))
-    return num
-
-
-def choose_number_or_random():
-    answer = int(input('If you want to skip a specific number of pixels, '
-                       'enter - "1"\nIf you want to choose random generation '
-                       'the number of skipped characters, enter - "2"\n'))
-    if answer == 1:
-        return answer, choose_num_of_skips()
-    elif answer == 2:
-        return answer, choose_seed_min_max()
-    else:
-        print('Wrong answer!')
-
-
-def choose_seed_min_max():
-    c_seed = int(input('Enter random seed:\n'))
-    c_min = int(input('Enter min of random(More than 0):\n'))
-    while c_min < 1:
-        print('Min must be more than "0"!')
-        c_min = int(input('Enter min of random(More than 0):\n'))
-    c_max = int(input('Enter max of random:\n'))
-    return c_seed, c_min, c_max
+def choose_color(i, col_patt):
+    if col_patt[i] == 'R' or col_patt[i] == 'r':
+        return 0
+    if col_patt[i] == 'G' or col_patt[i] == 'g':
+        return 1
+    if col_patt[i] == 'B' or col_patt[i] == 'b':
+        return 2
 
 
 def num_of_symbols():
     num_str = ''
     for x in range(32):
-        num_str += str(extract_stego_bit(x, 0))
+        num_str += str(extract_stego_bit(x, 0, 0))
     return int(num_str, 2)
 
 
-def extract_stego_bit(x, y):
-    return pix[x, y][selected_rgb] & 1
+def extract_stego_bit(x, y, sel_color):
+    return pix[x, y][sel_color] & 1
 
 
 image = Image.open('images/encoded.bmp')  # Открываем изображение
@@ -102,7 +81,6 @@ text = open(text_file, 'w', encoding='utf-8')  # Открываем текст
 width = image.size[0]  # Определяем ширину
 height = image.size[1]  # Определяем высоту
 pix = image.load()  # Выгружаем значения пикселей
-selected_rgb = choose_rgb()  # Выбираем спектр, в который будем кодировать
 
 decode_image()
 
