@@ -42,7 +42,6 @@ def encode_image_func1_2_3(color, num_skips, type_skips):
                     symbol = text.read(1)   # закодирован - берём новый.
 
                     if not symbol:
-                        print("Text has been encoded successfully")
                         return
 
                     symbol = ord(symbol)
@@ -87,7 +86,6 @@ def encode_image_func4(color_list, r_seed, r_min, r_max):
                     symbol = text.read(1)   # закодирован - берём новый.
 
                     if not symbol:
-                        print("Text has been encoded successfully")
                         return
 
                     symbol = ord(symbol)
@@ -134,7 +132,6 @@ def encode_image_func5(color, block_width, block_height):
                 symbol = text.read(1)
 
                 if not symbol:
-                    print("Text has been encoded successfully")
                     return
 
                 symbol = ord(symbol)
@@ -157,6 +154,42 @@ def encode_image_func5(color, block_width, block_height):
             y_img += block_height
 
         blocks_counter += 1
+
+
+def invert_bit_of_block(x, y, color):
+    new_color = [pix[x, y][0], pix[x, y][1], pix[x, y][2]]
+    new_color[color] = pix[x, y][color] ^ 1
+    new_color = tuple(new_color)
+    image.putpixel((x, y), new_color)
+
+
+def embed(source_byte, stego_bit):
+    if source_byte & 1 == stego_bit:
+        return source_byte
+    return source_byte ^ 1
+
+
+# Получаем двоичную 32-х разрядную длину текста
+def len_text_0bx32(txt_file):
+    text_len = bin(os.stat(txt_file).st_size)
+    text_len = text_len.replace('0b', '')
+    text_len = '0'*(32 - len(text_len)) + text_len
+    return text_len
+
+
+#  Кодируем в начало изображения количество закодированных символов
+def embed_len_text(text_len):
+    for x in range(32):
+        embed_color(x, 0, int(text_len[x]), 0)
+
+
+# Функция принимает координаты пикселя и нужный бит для упаковки,
+# после чего кодирует в выбранный ранее цветовой канал и изменяет пиксель.
+def embed_color(x, y, stego_bit, color):
+    new_color = [pix[x, y][0], pix[x, y][1], pix[x, y][2]]
+    new_color[color] = embed(pix[x, y][color], stego_bit)
+    new_color = tuple(new_color)
+    image.putpixel((x, y), new_color)
 
 
 def choose_color(i, col_patt):
@@ -205,7 +238,7 @@ def func4_input_stego_key():
 
 
 def func5_input_stego_key():
-    print('Functionality No. 3 was selected.\n'
+    print('Functionality No. 5 was selected.\n'
           'Enter Stego-key <color_channel  K  M>:\n$ ', end='')
     input_list = list(input().split())
     print()
@@ -214,70 +247,26 @@ def func5_input_stego_key():
     return choose_color(0, color), b_width, b_height
 
 
-def invert_bit_of_block(x, y, color):
-    new_color = [pix[x, y][0], pix[x, y][1], pix[x, y][2]]
-    new_color[color] = pix[x, y][color] ^ 1
-    new_color = tuple(new_color)
-    image.putpixel((x, y), new_color)
-
-
-def embed(source_byte, stego_bit):
-    if source_byte & 1 == stego_bit:
-        return source_byte
-    return source_byte ^ 1
-
-
-# Получаем двоичную 32-х разрядную длину текста
-def len_text_0bx32(txt_file):
-    text_len = bin(os.stat(txt_file).st_size)
-    text_len = text_len.replace('0b', '')
-    text_len = '0'*(32 - len(text_len)) + text_len
-    return text_len
-
-
-#  Кодируем в начало изображения количество закодированных символов
-def embed_len_text(text_len):
-    for x in range(32):
-        embed_color(x, 0, int(text_len[x]), 0)
-
-
-# Функция принимает координаты пикселя и нужный бит для упаковки,
-# после чего кодирует в выбранный ранее цветовой канал и изменяет пиксель.
-def embed_color(x, y, stego_bit, color):
-    new_color = [pix[x, y][0], pix[x, y][1], pix[x, y][2]]
-    new_color[color] = embed(pix[x, y][color], stego_bit)
-    new_color = tuple(new_color)
-    image.putpixel((x, y), new_color)
-
-
 def choose_functionality():
-    print('Welcome to Steganographic data protection software system!\n',
-          'The program has 5 functionalities:\n',
-          'Functionality No. 1 - we introduce secret bits\n'
-          'into all pixels in a row.\n'
-          'Stego-key = <color_channel>\n',
-          'Functionality No. 2 - we introduce secret bits in pixels,\n '
-          'but not in everything, but with a fixed interval n.\n'
-          'Stego-key = <color_channel  n>\n',
-          'Functionality No. 3 - in contrast to the previous functionality,\n'
-          'the interval is not fixed, but changes at each\n'
-          'step of implementation.\n'
-          'Stego-key = <color_channel  seed  min  max>\n',
-          'Functionality No. 4 - includes Functionality No. 3, but\n'
-          'in addition, the color channel will change for each embedded\n'
-          'secret bit in accordance with the channel change pattern,\n'
-          'which looks like <RGGBBB>.\n'
-          'Stego-key = <color_pattern  seed  min  max>\n',
-          'Functionality No. 5 - has a block implementation.\n'
-          'This is when the secret bit is embedded not in one pixel,\n'
-          'but in a block of pixels. A block is a rectangular section of\n'
-          'an image of size K * M pixels.\n'
-          'Stego-key = <color_channel  K  M>\n',
-          'If you want to exit - enter 0.\n', sep='\n')
+    choose = 9
 
-    while True:
-        choose = int(input('Select functionality and enter '
-                           'its number (1-5):\n$ '))
+    while choose == 7 or choose == 9 or choose == 999:
+        if choose != 7:
+            print(
+                '================================================================',
+                '== Welcome to Steganographic data protection software system! ==',
+                '================================================================',
+                '\nThis program will ENCODE your message into an image.\n\n'
+                'Available commands:\n'
+                '1-5 - Select functionality No. (1-5) to decode your message\n'
+                ' 7  - Functionality Description\n'
+                ' 9  - Clear Screen\n'
+                ' 0  - Exit\n', sep='\n')
+
+            if choose == 999:
+                print('== Wrong command, try again! ==\n')
+
+        choose = int(input('Enter your choice:\n$ '))
         print()
         if choose == 1:
             a, b, c = func1_input_stego_key()
@@ -294,12 +283,37 @@ def choose_functionality():
         elif choose == 5:
             a, b, c = func5_input_stego_key()
             encode_image_func5(a, b, c)
+        elif choose == 7:
+            print('The system has 5 functionalities:\n',
+                  'Functionality No. 1:\n'
+                  'Stego-key = <color_channel>\n',
+                  'Functionality No. 2 - we introduce secret bits in pixels,\n'
+                  'but not in everything, but with a fixed interval n.\n'
+                  'Stego-key = <color_channel  n>\n',
+                  'Functionality No. 3 - in contrast to the previous\n'
+                  'functionality, the interval is not fixed, but changes\n'
+                  'at each step of implementation.\n'
+                  'Stego-key = <color_channel  seed  min  max>\n',
+                  'Functionality No. 4 - includes Functionality No. 3, but\n'
+                  'in addition, the color channel will change for each\n'
+                  'embedded secret bit in accordance with the channel change\n'
+                  'pattern, which looks like <RGGBBB>.\n'
+                  'Stego-key = <color_pattern  seed  min  max>\n',
+                  'Functionality No. 5 - has a block implementation.\n'
+                  'This is when the secret bit is embedded not in one pixel,\n'
+                  'but in a block of pixels. A block is a rectangular\n'
+                  'section of an image of size K * M pixels.\n'
+                  'Stego-key = <color_channel  K  M>\n', sep='\n')
+        elif choose == 9:
+            os.system('CLS')
         elif choose == 0:
             break
         else:
-            print('Wrong answer! Try to choose functionality again.\n'
-                  'If you want to exit - enter 0.\n$ ')
-        print()
+            choose = 999
+            os.system('CLS')
+
+        if 0 < choose <= 5:
+            print('Text has been encoded successfully!\n')
 
 
 image = Image.open('images/f35.bmp')  # Открываем изображение
@@ -317,3 +331,4 @@ choose_functionality()
 
 image.save("images/encoded.bmp", "bmp")
 text.close()
+os.system('pause')
