@@ -8,7 +8,6 @@ def encode_image_func5():
     text_mask = 0b10000000
     text_len = os.stat(text_file).st_size
     len_text_bin = len_text_0bx32(text_file)
-    print(len_text_bin)
     color, block_width, block_height = func5_input_stego_key()
     color = choose_color(0, color)
     all_blocks = (width // block_width) * (height // block_height)
@@ -33,19 +32,19 @@ def encode_image_func5():
                 xor_block ^= extract_bit
 
         if blocks_counter < 32:
-            print(xor_block)
-            if len_text_bin[blocks_counter] != xor_block:
+            if int(len_text_bin[blocks_counter]) != xor_block:
                 invert_bit_of_block(x_img, y_img, color)
-        elif blocks_counter % 8 == 0 and blocks_counter != 32:
-            symbol = text.read(1)
-
-            if not symbol:
-                print("Text has been encoded successfully")
-                return
-
-            symbol = ord(symbol)
         # Если длина текста закодирована в блоки - кодируем символы.
-        if blocks_counter >= 32:
+        else:
+            if blocks_counter % 8 == 0:
+                symbol = text.read(1)
+
+                if not symbol:
+                    print("Text has been encoded successfully")
+                    return
+
+                symbol = ord(symbol)
+
             stego_bit = symbol & text_mask
             stego_bit >>= 7
 
@@ -59,7 +58,7 @@ def encode_image_func5():
         x_img += block_width
 
         # Если по горизонтали закодированы все блоки, берём следующий ряд.
-        if x_img + block_width - 1 > width:
+        if x_img + block_width - 1 >= width:
             x_img = 0
             y_img += block_height
 

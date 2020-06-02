@@ -14,12 +14,11 @@ def decode_image():
     num_str = ''
     symbol = 0
     blocks_counter = 0
+    xor_block = 0
     x_img = 0
     y_img = 0
 
     while True:
-        xor_block = 0
-
         for y in range(block_height):
             for x in range(block_width):
                 if x == 0 and y == 0:
@@ -31,10 +30,13 @@ def decode_image():
 
         if blocks_counter < 32:
             num_str += str(xor_block)
+            blocks_counter += 1
 
-            if blocks_counter == 31:
+            if blocks_counter == 32:
                 amount_symbols = int(num_str, 2)
         else:
+            blocks_counter += 1
+
             symbol <<= 1
             symbol |= xor_block
 
@@ -54,11 +56,9 @@ def decode_image():
         x_img += block_width
 
         # Если по горизонтали закодированы все блоки, берём следующий ряд.
-        if x_img + block_width - 1 > width:
+        if x_img + block_width - 1 >= width:
             x_img = 0
             y_img += block_height
-
-        blocks_counter += 1
 
 
 def choose_rgb():
