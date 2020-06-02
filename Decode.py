@@ -4,35 +4,41 @@ from random import randint, seed
 
 
 def decode_image():
-    amount_symbols = num_of_symbols()
+    # Задаём необходимые переменные
+    color, block_width, block_height = func5_input_stego_key()
+    color = choose_color(0, color)
+    # Пока не получена информация о длине текста, его длиной временно будет
+    # считаться 32 бита, в которых закодирована эта информация.
+    amount_symbols = 32
     recorded_symbols = 0
+    num_str = ''
     symbol = 0
-    counter = -1
-    num_stegobits = 0  # Количество записанных стегобитов
+    blocks_counter = 0
+    x_img = 0
+    y_img = 0
 
-    color_list, r_seed, r_min, r_max = choose_stego_key()
-    col_len = len(color_list)
-    seed(r_seed)
-    num_skips = randint(r_min, r_max)
+    while True:
+        xor_block = 0
 
-    for y in range(height):
-        for x in range(width):
-            if y == 0 and x < 32:  # Пропускаем сообщение о количестве
-                continue  # символов в тексте
+        for y in range(block_height):
+            for x in range(block_width):
+                if x == 0 and y == 0:
+                    xor_block = pix[x + x_img, y + y_img][color] & 1
+                    continue
 
-            counter += 1
-            # Если пропустили нужное количество символов - выполняем код
-            if counter % num_skips != 0:
-                continue
+                extract_bit = pix[x + x_img, y + y_img][color] & 1
+                xor_block ^= extract_bit
 
-            num_skips = randint(r_min, r_max)
-            color = choose_color(counter % col_len, color_list)
-            # Записываем извлечённый стегобит в символ
+        if blocks_counter < 32:
+            num_str += str(xor_block)
+
+            if blocks_counter == 31:
+                amount_symbols = int(num_str, 2)
+        else:
             symbol <<= 1
-            symbol |= extract_stego_bit(x, y, color)
-            num_stegobits += 1
+            symbol |= xor_block
 
-            if num_stegobits % 8 == 0:
+            if blocks_counter % 8 == 0 and blocks_counter != 32:
                 if chr(symbol) == '\n' and len(os.linesep) == 2:
                     recorded_symbols += 1
 
@@ -44,8 +50,24 @@ def decode_image():
                 print('Text has been decoded successfully!')
                 return True
 
+        # Переходим к следующему блоку
+        x_img += block_width
 
-def choose_stego_key():
+        # Если по горизонтали закодированы все блоки, берём следующий ряд.
+        if x_img + block_width - 1 > width:
+            x_img = 0
+            y_img += block_height
+
+        blocks_counter += 1
+
+
+def choose_rgb():
+    chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
+                           " 2 - Blue; 3 - Green:\n"))
+    return chosen_rgb - 1
+
+
+def func4_input_stego_key():
     print('Enter stego key, separated by space.\n'
           'It should look like: "color_pattern random_seed rnd_min rnd_max"\n'
           'For example: "RGGBBB 1234 1 10"\nEnter stego key --> ', end='')
@@ -53,6 +75,16 @@ def choose_stego_key():
     col_patt = input_list[0]
     rand_seed, rand_min, rand_max = map(int, input_list[1:])
     return col_patt, rand_seed, rand_min, rand_max
+
+
+def func5_input_stego_key():
+    print('Enter stego key, separated by space.\n'
+          'It should look like: "color_channel  block_width  block_height"\n'
+          'For example: "R/G/B 3 4"\nEnter stego key --> ', end='')
+    input_list = list(input().split())
+    color = input_list[0]
+    b_width, b_height = map(int, input_list[1:])
+    return color, b_width, b_height
 
 
 def choose_color(i, col_patt):

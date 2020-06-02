@@ -3,64 +3,73 @@ from PIL import Image
 from random import randint, seed
 
 
-def encode_image():
+def encode_image_func5():
+    # Задаём необходимые переменные
     text_mask = 0b10000000
     text_len = os.stat(text_file).st_size
-    img_len = width * height
-    color_list, r_seed, r_min, r_max = choose_stego_key()
-    col_len = len(color_list)
-    seed(r_seed)
-    possible_symbols = (img_len - 32) // (r_max - r_min)
-    num_skips = randint(r_min, r_max)
+    len_text_bin = len_text_0bx32(text_file)
+    print(len_text_bin)
+    color, block_width, block_height = func5_input_stego_key()
+    color = choose_color(0, color)
+    all_blocks = (width // block_width) * (height // block_height)
+    blocks_counter = 0
+    xor_block = 0
+    symbol = 0
+    x_img = 0
+    y_img = 0
 
-    if text_len > possible_symbols:  # Определяем влезет ли
-        print("Too long text")       # текст в изображение
+    if text_len * 8 + 32 > all_blocks:
+        print('Too long text')
         return False
 
-    embed_len_text(text_file)
-
     while True:
-        symbol = 0
-        counter = -1
-        num_stegobits = 0  # Количество записанных стегобитов в символ.
-        for y in range(height):
-            for x in range(width):
-                if y == 0 and x < 32:  # Пропускаем сообщение о количестве
-                    continue           # символов в тексте
-
-                counter += 1
-
-                if counter % num_skips != 0:
+        for y in range(block_height):
+            for x in range(block_width):
+                if x == 0 and y == 0:
+                    xor_block = pix[x + x_img, y + y_img][color] & 1
                     continue
 
-                if num_stegobits % 8 == 0:        # Если весь символ был
-                    symbol = text.read(1)   # закодирован - берём новый.
+                extract_bit = pix[x + x_img, y + y_img][color] & 1
+                xor_block ^= extract_bit
 
-                    if not symbol:
-                        print("Text has been encoded successfully")
-                        return
+        if blocks_counter < 32:
+            print(xor_block)
+            if len_text_bin[blocks_counter] != xor_block:
+                invert_bit_of_block(x_img, y_img, color)
+        elif blocks_counter % 8 == 0 and blocks_counter != 32:
+            symbol = text.read(1)
 
-                    symbol = ord(symbol)
+            if not symbol:
+                print("Text has been encoded successfully")
+                return
 
-                stego_bit = symbol & text_mask
-                stego_bit >>= 7
-                sel_color = choose_color(counter % col_len, color_list)
+            symbol = ord(symbol)
+        # Если длина текста закодирована в блоки - кодируем символы.
+        if blocks_counter >= 32:
+            stego_bit = symbol & text_mask
+            stego_bit >>= 7
 
-                embed_color(x, y, stego_bit, sel_color)
+            # Здесь происходит кодирования бита в блок
+            if stego_bit != xor_block:
+                invert_bit_of_block(x_img, y_img, color)
 
-                num_stegobits += 1
-                symbol <<= 1
-                num_skips = randint(r_min, r_max)
+            symbol <<= 1
+
+        # Переходим к следующему блоку
+        x_img += block_width
+
+        # Если по горизонтали закодированы все блоки, берём следующий ряд.
+        if x_img + block_width - 1 > width:
+            x_img = 0
+            y_img += block_height
+
+        blocks_counter += 1
 
 
-def choose_stego_key():
-    print('Enter stego key, separated by space.\n'
-          'It should look like: "color_pattern random_seed rnd_min rnd_max"\n'
-          'For example: "RGGBBB 1234 1 10"\nEnter stego key --> ', end='')
-    input_list = list(input().split())
-    col_patt = input_list[0]
-    rand_seed, rand_min, rand_max = map(int, input_list[1:])
-    return col_patt, rand_seed, rand_min, rand_max
+def choose_rgb():
+    chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
+                           " 2 - Blue; 3 - Green:\n"))
+    return chosen_rgb - 1
 
 
 def choose_color(i, col_patt):
@@ -72,17 +81,49 @@ def choose_color(i, col_patt):
         return 2
 
 
+def func5_input_stego_key():
+    print('Enter stego key, separated by space.\n'
+          'It should look like: "color_channel  block_width  block_height"\n'
+          'For example: "R/G/B 3 4"\nEnter stego key --> ', end='')
+    input_list = list(input().split())
+    color = input_list[0]
+    b_width, b_height = map(int, input_list[1:])
+    return color, b_width, b_height
+
+
+def invert_bit_of_block(x, y, color):
+    new_color = [pix[x, y][0], pix[x, y][1], pix[x, y][2]]
+    new_color[color] = pix[x, y][color] ^ 1
+    new_color = tuple(new_color)
+    image.putpixel((x, y), new_color)
+
+
+def func4_input_stego_key():
+    print('Enter stego key, separated by space.\n'
+          'It should look like: "color_pattern random_seed rnd_min rnd_max"\n'
+          'For example: "RGGBBB 1234 1 10"\nEnter stego key --> ', end='')
+    input_list = list(input().split())
+    col_patt = input_list[0]
+    rand_seed, rand_min, rand_max = map(int, input_list[1:])
+    return col_patt, rand_seed, rand_min, rand_max
+
+
 def embed(source_byte, stego_bit):
     if source_byte & 1 == stego_bit:
         return source_byte
     return source_byte ^ 1
 
 
-#  Кодируем в начало изображения количество закодированных символов
-def embed_len_text(txt_file):
+# Получаем двоичную 32-х разрядную длину текста
+def len_text_0bx32(txt_file):
     text_len = bin(os.stat(txt_file).st_size)
     text_len = text_len.replace('0b', '')
     text_len = '0'*(32 - len(text_len)) + text_len
+    return text_len
+
+
+#  Кодируем в начало изображения количество закодированных символов
+def embed_len_text(text_len):
     for x in range(32):
         embed_color(x, 0, int(text_len[x]), 0)
 
@@ -103,7 +144,7 @@ width = image.size[0]  # Определяем ширину
 height = image.size[1]  # Определяем высоту
 pix = image.load()  # Выгружаем значения пикселей
 
-encode_image()
+encode_image_func5()
 
 image.save("images/encoded.bmp", "bmp")
 text.close()
