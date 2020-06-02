@@ -3,13 +3,107 @@ from PIL import Image
 from random import randint, seed
 
 
-def encode_image_func5():
-    # Задаём необходимые переменные
-    text_mask = 0b10000000
-    text_len = os.stat(text_file).st_size
-    len_text_bin = len_text_0bx32(text_file)
-    color, block_width, block_height = func5_input_stego_key()
-    color = choose_color(0, color)
+def encode_image_func1_2_3(color, num_skips, type_skips):
+    possible_symbols = 0
+    r_min, r_max = 1, 1
+
+    if type_skips == 1:
+        # Чтобы избежать деления на 0 и для корректного пропуска пикселей
+        num_skips += 1
+        # Количество возможных символов в изображении при выбранном режиме
+        possible_symbols = (img_len - 32) // num_skips
+    elif type_skips == 2:
+        r_seed, r_min, r_max = num_skips
+        seed(r_seed)
+        possible_symbols = (img_len - 32) // (r_max - r_min)
+        num_skips = randint(r_min, r_max)
+
+    if text_len * 8 > possible_symbols:  # Определяем влезет ли
+        print("Too long text")       # текст в изображение
+        return False
+
+    embed_len_text(len_text_bin)
+
+    while True:
+        symbol = 0
+        counter = -1
+        num_stegobits = 0  # Количество записанных стегобитов в символ.
+        for y in range(height):
+            for x in range(width):
+                if y == 0 and x < 32:  # Пропускаем сообщение о количестве
+                    continue           # символов в тексте
+
+                counter += 1
+
+                if counter % num_skips != 0:
+                    continue
+
+                if num_stegobits % 8 == 0:        # Если весь символ был
+                    symbol = text.read(1)   # закодирован - берём новый.
+
+                    if not symbol:
+                        print("Text has been encoded successfully")
+                        return
+
+                    symbol = ord(symbol)
+
+                stego_bit = symbol & text_mask
+                stego_bit >>= 7
+                embed_color(x, y, stego_bit, color)
+                num_stegobits += 1
+                symbol <<= 1
+
+                if type_skips == 2:
+                    num_skips = randint(r_min, r_max)
+
+
+def encode_image_func4(color_list, r_seed, r_min, r_max):
+    col_len = len(color_list)
+    seed(r_seed)
+    possible_symbols = (img_len - 32) // (r_max - r_min)
+    num_skips = randint(r_min, r_max)
+
+    if text_len * 8 > possible_symbols:  # Определяем влезет ли
+        print("Too long text")       # текст в изображение
+        return False
+
+    embed_len_text(len_text_bin)
+
+    while True:
+        symbol = 0
+        counter = -1
+        num_stegobits = 0  # Количество записанных стегобитов в символ.
+        for y in range(height):
+            for x in range(width):
+                if y == 0 and x < 32:  # Пропускаем сообщение о количестве
+                    continue           # символов в тексте
+
+                counter += 1
+
+                if counter % num_skips != 0:
+                    continue
+
+                if num_stegobits % 8 == 0:        # Если весь символ был
+                    symbol = text.read(1)   # закодирован - берём новый.
+
+                    if not symbol:
+                        print("Text has been encoded successfully")
+                        return
+
+                    symbol = ord(symbol)
+
+                stego_bit = symbol & text_mask
+                stego_bit >>= 7
+                sel_color = choose_color(counter % col_len, color_list)
+
+                embed_color(x, y, stego_bit, sel_color)
+
+                num_stegobits += 1
+                symbol <<= 1
+                num_skips = randint(r_min, r_max)
+
+
+def encode_image_func5(color, block_width, block_height):
     all_blocks = (width // block_width) * (height // block_height)
     blocks_counter = 0
     xor_block = 0
@@ -65,12 +159,6 @@ def encode_image_func5():
         blocks_counter += 1
 
 
-def choose_rgb():
-    chosen_rgb = int(input("Choose a color spectrum to encode:\n1 - Red;"
-                           " 2 - Blue; 3 - Green:\n"))
-    return chosen_rgb - 1
-
-
 def choose_color(i, col_patt):
     if col_patt[i] == 'R' or col_patt[i] == 'r':
         return 0
@@ -80,14 +168,50 @@ def choose_color(i, col_patt):
         return 2
 
 
-def func5_input_stego_key():
-    print('Enter stego key, separated by space.\n'
-          'It should look like: "color_channel  block_width  block_height"\n'
-          'For example: "R/G/B 3 4"\nEnter stego key --> ', end='')
+def func1_input_stego_key():
+    print('Functionality No. 1 was selected.\n'
+          'Enter Stego-key <color_channel>:\n$ ', end='')
+    choose = input()
+    print()
+    return choose_color(0, choose), 0, 1
+
+
+def func2_input_stego_key():
+    print('Functionality No. 2 was selected.\n'
+          'Enter Stego-key <color_channel  n>:\n$ ', end='')
+    choose = list(input().split())
+    print()
+    return choose_color(0, choose[0]), int(choose[1]), 1
+
+
+def func3_input_stego_key():
+    print('Functionality No. 3 was selected.\n'
+          'Enter Stego-key <color_channel  seed  min  max>:\n$ ', end='')
+    choose = list(input().split())
+    print()
+    color = choose[0]
+    rand_list = list(map(int, choose[1:]))
+    return choose_color(0, color), rand_list, 2
+
+
+def func4_input_stego_key():
+    print('Functionality No. 4 was selected.\n'
+          'Enter Stego-key <color_pattern  seed  min  max>:\n$ ', end='')
     input_list = list(input().split())
+    print()
+    col_patt = input_list[0]
+    rand_seed, rand_min, rand_max = map(int, input_list[1:])
+    return col_patt, rand_seed, rand_min, rand_max
+
+
+def func5_input_stego_key():
+    print('Functionality No. 3 was selected.\n'
+          'Enter Stego-key <color_channel  K  M>:\n$ ', end='')
+    input_list = list(input().split())
+    print()
     color = input_list[0]
     b_width, b_height = map(int, input_list[1:])
-    return color, b_width, b_height
+    return choose_color(0, color), b_width, b_height
 
 
 def invert_bit_of_block(x, y, color):
@@ -95,16 +219,6 @@ def invert_bit_of_block(x, y, color):
     new_color[color] = pix[x, y][color] ^ 1
     new_color = tuple(new_color)
     image.putpixel((x, y), new_color)
-
-
-def func4_input_stego_key():
-    print('Enter stego key, separated by space.\n'
-          'It should look like: "color_pattern random_seed rnd_min rnd_max"\n'
-          'For example: "RGGBBB 1234 1 10"\nEnter stego key --> ', end='')
-    input_list = list(input().split())
-    col_patt = input_list[0]
-    rand_seed, rand_min, rand_max = map(int, input_list[1:])
-    return col_patt, rand_seed, rand_min, rand_max
 
 
 def embed(source_byte, stego_bit):
@@ -136,14 +250,70 @@ def embed_color(x, y, stego_bit, color):
     image.putpixel((x, y), new_color)
 
 
+def choose_functionality():
+    print('Welcome to Steganographic data protection software system!\n',
+          'The program has 5 functionalities:\n',
+          'Functionality No. 1 - we introduce secret bits\n'
+          'into all pixels in a row.\n'
+          'Stego-key = <color_channel>\n',
+          'Functionality No. 2 - we introduce secret bits in pixels,\n '
+          'but not in everything, but with a fixed interval n.\n'
+          'Stego-key = <color_channel  n>\n',
+          'Functionality No. 3 - in contrast to the previous functionality,\n'
+          'the interval is not fixed, but changes at each\n'
+          'step of implementation.\n'
+          'Stego-key = <color_channel  seed  min  max>\n',
+          'Functionality No. 4 - includes Functionality No. 3, but\n'
+          'in addition, the color channel will change for each embedded\n'
+          'secret bit in accordance with the channel change pattern,\n'
+          'which looks like <RGGBBB>.\n'
+          'Stego-key = <color_pattern  seed  min  max>\n',
+          'Functionality No. 5 - has a block implementation.\n'
+          'This is when the secret bit is embedded not in one pixel,\n'
+          'but in a block of pixels. A block is a rectangular section of\n'
+          'an image of size K * M pixels.\n'
+          'Stego-key = <color_channel  K  M>\n',
+          'If you want to exit - enter 0.\n', sep='\n')
+
+    while True:
+        choose = int(input('Select functionality and enter '
+                           'its number (1-5):\n$ '))
+        print()
+        if choose == 1:
+            a, b, c = func1_input_stego_key()
+            encode_image_func1_2_3(a, b, c)
+        elif choose == 2:
+            a, b, c = func2_input_stego_key()
+            encode_image_func1_2_3(a, b, c)
+        elif choose == 3:
+            a, b, c = func3_input_stego_key()
+            encode_image_func1_2_3(a, b, c)
+        elif choose == 4:
+            a, b, c, d = func4_input_stego_key()
+            encode_image_func4(a, b, c, d)
+        elif choose == 5:
+            a, b, c = func5_input_stego_key()
+            encode_image_func5(a, b, c)
+        elif choose == 0:
+            break
+        else:
+            print('Wrong answer! Try to choose functionality again.\n'
+                  'If you want to exit - enter 0.\n$ ')
+        print()
+
+
 image = Image.open('images/f35.bmp')  # Открываем изображение
 text_file = 'sample.txt'
 text = open(text_file, 'r')  # Открываем текст
 width = image.size[0]  # Определяем ширину
 height = image.size[1]  # Определяем высоту
 pix = image.load()  # Выгружаем значения пикселей
+text_mask = 0b10000000
+text_len = os.stat(text_file).st_size
+len_text_bin = len_text_0bx32(text_file)
+img_len = width * height
 
-encode_image_func5()
+choose_functionality()
 
 image.save("images/encoded.bmp", "bmp")
 text.close()
